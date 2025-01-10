@@ -182,4 +182,4 @@ def get_video_formats():
         return jsonify({'error': 'An error occurred on the server'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='127.0.0.1', port=5000)
