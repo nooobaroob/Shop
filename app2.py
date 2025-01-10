@@ -158,17 +158,21 @@ def get_video_formats():
         formats_list = []
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(youtube_url, download=False)
-            formats = info.get('formats', [])
+            try:
+                info = ydl.extract_info(youtube_url, download=False)
+                formats = info.get('formats', [])
 
-            # Filter for the desired resolutions and create the response
-            for f in formats:
-                if f.get('height') in [1080, 720, 480] and f.get('url'):
-                    formats_list.append({
-                        'resolution': f"{f['height']}p",
-                        'ext': f['ext'],
-                        'url': f['url']
-                    })
+                # Filter for the desired resolutions and create the response
+                for f in formats:
+                    if f.get('height') in [1080, 720, 480] and f.get('url'):
+                        formats_list.append({
+                            'resolution': f"{f['height']}p",
+                            'ext': f['ext'],
+                            'url': f['url']
+                        })
+            except yt_dlp.utils.DownloadError as e:
+                print(f"DownloadError: {e}")
+                return jsonify({'error': 'YouTube blocked the request. Please try again later.'}), 503
 
         if not formats_list:
             return jsonify({'error': 'No suitable formats found'}), 404
