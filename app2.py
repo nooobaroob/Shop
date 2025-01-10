@@ -1,7 +1,50 @@
 from flask import Flask, request, jsonify
 import yt_dlp
+import random
+import requests
+from requests.cookies import RequestsCookieJar
 
 app = Flask(__name__)
+
+# List of User-Agent strings to rotate
+user_agents = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; AS; rv:11.0) like Gecko"
+]
+
+# List of referers to rotate
+referers = [
+    "https://www.youtube.com/",
+    "https://www.google.com/",
+    "https://m.youtube.com/"
+]
+
+# Function to save cookies
+def save_cookies(url, cookie_filename):
+    session = requests.Session()
+    session.get(url)  # Get page to store cookies
+    cookies = session.cookies
+
+    # Saving cookies to a file
+    with open(cookie_filename, 'w') as f:
+        for cookie in cookies:
+            f.write(f'{cookie.name}={cookie.value}; domain={cookie.domain}; path={cookie.path}\n')
+
+# Function to load cookies
+def load_cookies(cookie_filename):
+    cookies = RequestsCookieJar()
+    try:
+        with open(cookie_filename, 'r') as f:
+            for line in f.readlines():
+                parts = line.strip().split(';')
+                cookie = parts[0].split('=')
+                name, value = cookie[0], cookie[1]
+                cookies.set(name, value)
+    except FileNotFoundError:
+        print("Cookie file not found.")
+    return cookies
 
 # Serve the main page
 @app.route('/')
@@ -98,10 +141,22 @@ def get_video_formats():
         if not youtube_url:
             return jsonify({'error': 'No URL provided'}), 400
 
-        ydl_opts = {'quiet': True}
+        # Randomly choose User-Agent and Referrer for each request
+        user_agent = random.choice(user_agents)
+        referer = random.choice(referers)
+
+        # Load cookies
+        cookies = load_cookies('cookies.txt')
+
+        ydl_opts = {
+            'quiet': True,
+            'user_agent': user_agent,
+            'referer': referer,
+            'cookies': cookies
+        }
+
         formats_list = []
 
-        # Handling yt-dlp and extracting formats
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=False)
             formats = info.get('formats', [])
@@ -118,14 +173,13 @@ def get_video_formats():
         if not formats_list:
             return jsonify({'error': 'No suitable formats found'}), 404
 
-        return jsonify({'formats': formats_list}), 200
+        # Optionally, save cookies after processing
+        save_cookies(youtube_url, 'cookies.txt')
 
-    except yt_dlp.utils.DownloadError as e:
-        return jsonify({'error': f'Failed to extract video: {str(e)}'}), 500
+        return jsonify({'formats': formats_list}), 200
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({'error': 'An error occurred on the server'}), 500
 
 if __name__ == '__main__':
-    # Ensure the app runs on all available interfaces (0.0.0.0) with a specific port, e.g., 8080
-    app.run(debug=True, host='0.0.0.0', port=8080)
+    app.run(debug=True)
