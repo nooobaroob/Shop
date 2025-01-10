@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import yt_dlp
 import random
 import requests
+import time
 from requests.cookies import RequestsCookieJar
 
 app = Flask(__name__)
@@ -45,6 +46,10 @@ def load_cookies(cookie_filename):
     except FileNotFoundError:
         print("Cookie file not found.")
     return cookies
+
+# Function to handle delay between requests
+def add_request_delay():
+    time.sleep(random.randint(3, 7))  # Random delay between 3 to 7 seconds
 
 # Serve the main page
 @app.route('/')
@@ -152,7 +157,7 @@ def get_video_formats():
             'quiet': True,
             'user_agent': user_agent,
             'referer': referer,
-            'cookies': cookies
+            'cookies': cookies,
         }
 
         formats_list = []
@@ -170,20 +175,21 @@ def get_video_formats():
                             'ext': f['ext'],
                             'url': f['url']
                         })
+                # Optionally, save cookies after processing
+                save_cookies(youtube_url, 'cookies.txt')
+
             except yt_dlp.utils.DownloadError as e:
-                print(f"DownloadError: {e}")
-                return jsonify({'error': 'YouTube blocked the request. Please try again later.'}), 503
+                return jsonify({'error': 'Download Error: ' + str(e)}), 400
 
-        if not formats_list:
-            return jsonify({'error': 'No suitable formats found'}), 404
-
-        # Optionally, save cookies after processing
-        save_cookies(youtube_url, 'cookies.txt')
+            if not formats_list:
+                return jsonify({'error': 'No suitable formats found'}), 404
 
         return jsonify({'formats': formats_list}), 200
+
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({'error': 'An error occurred on the server'}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
