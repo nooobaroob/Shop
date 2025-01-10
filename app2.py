@@ -101,6 +101,7 @@ def get_video_formats():
         ydl_opts = {'quiet': True}
         formats_list = []
 
+        # Handling yt-dlp and extracting formats
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=False)
             formats = info.get('formats', [])
@@ -118,9 +119,13 @@ def get_video_formats():
             return jsonify({'error': 'No suitable formats found'}), 404
 
         return jsonify({'formats': formats_list}), 200
+
+    except yt_dlp.utils.DownloadError as e:
+        return jsonify({'error': f'Failed to extract video: {str(e)}'}), 500
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({'error': 'An error occurred on the server'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Ensure the app runs on all available interfaces (0.0.0.0) with a specific port, e.g., 8080
+    app.run(debug=True, host='0.0.0.0', port=8080)
