@@ -23,14 +23,14 @@ def validate_youtube_url(url):
     # Remove query parameters (anything after "?")
     url = url.split('?')[0]
 
-    # Match valid YouTube URL formats
+    # Match valid YouTube URL formats (both normal and shortened versions)
     match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+(?:v=|/)([^&?]+)", url)
     
     if match:
-        video_id = match.group(4)
+        video_id = match.group(4)  # Extract the video ID from the matched URL
         logger.debug(f"Extracted Video ID: {video_id}")
         return video_id
-    return None
+    return None  # Return None if the URL is invalid or doesn't match the expected pattern
 
 # Serve the main page (HTML)
 @app.route('/')
