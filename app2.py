@@ -27,7 +27,7 @@ def validate_youtube_url(url):
     match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/(?:watch\?v=|(?:v|e(?:mbed)?)?/)([^&?]+)", url)
     
     if match:
-        video_id = match.group(4)  # Extract the video ID from the matched URL
+        video_id = match.group(5)  # Extract the video ID from the matched URL
         logger.debug(f"Extracted Video ID: {video_id}")
         return video_id
     else:
@@ -179,11 +179,4 @@ def get_video_formats():
             logger.warning('No download options available.')
             return jsonify({'error': 'No download options available.'}), 404
 
-        return jsonify({'formats': formats_list}), 200
-
-    except Exception as e:
-        logger.error(f"Error occurred: {e}")
-        return jsonify({'error': 'An internal server error occurred.'}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+        return jsonify({'formats': formats_list}),
