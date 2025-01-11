@@ -1,9 +1,8 @@
 from flask import Flask, request, jsonify
-import requests
-import re
+from pytube import YouTube
+import logging
 import random
 import time
-import logging
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -19,18 +18,13 @@ def add_request_delay():
 # Function to validate YouTube URL and extract video ID
 def validate_youtube_url(url):
     logger.debug(f"Validating URL: {url}")
-    
-    # Remove query parameters (anything after "?")
-    url = url.split('?')[0]
-
-    # Match valid YouTube URL formats (both normal and shortened versions)
-    match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+(?:v=|/)([^&?]+)", url)
-    
-    if match:
-        video_id = match.group(4)  # Extract the video ID from the matched URL
-        logger.debug(f"Extracted Video ID: {video_id}")
-        return video_id
-    return None  # Return None if the URL is invalid or doesn't match the expected pattern
+    try:
+        # Attempt to create a YouTube object which validates the URL automatically
+        yt = YouTube(url)
+        return yt
+    except Exception as e:
+        logger.error(f"Error validating URL: {e}")
+        return None
 
 # Serve the main page (HTML)
 @app.route('/')
@@ -120,7 +114,7 @@ def index():
     </html>
     '''
 
-# Route to get video formats using RapidAPI
+# Route to get video formats using Pytube
 @app.route('/get_video_formats', methods=['POST'])
 def get_video_formats():
     youtube_url = request.form.get('url')
@@ -130,58 +124,26 @@ def get_video_formats():
         logger.error('No URL provided in the request.')
         return jsonify({'error': 'No URL provided'}), 400
 
-    video_id = validate_youtube_url(youtube_url)
-    if not video_id:
+    yt = validate_youtube_url(youtube_url)
+    if not yt:
         logger.error(f"Invalid URL: {youtube_url}")
         return jsonify({'error': 'Invalid YouTube URL'}), 400
 
-    logger.debug(f"Video ID: {video_id}")
+    logger.debug(f"Video ID: {yt.video_id}")
 
-    # Set up API headers
-    headers = {
-        "x-rapidapi-host": "ytstream-download-youtube-videos.p.rapidapi.com",
-        "x-rapidapi-key": "38d94251c1mshb9e06a6431e3256p133708jsne945caa69315"
-    }
+    # Get video streams (progressive streams contain both video and audio)
+    streams = yt.streams.filter(progressive=True)
 
-    # Construct the API URL
-    api_url = f"https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id={video_id}"
-    logger.debug(f"API Request URL: {api_url}")
-    
-    try:
-        # Simulate human-like delay
-        add_request_delay()
+    formats_list = [
+        {'resolution': stream.resolution, 'url': stream.url}
+        for stream in streams
+    ]
 
-        # Send GET request to RapidAPI
-        response = requests.get(api_url, headers=headers)
+    if not formats_list:
+        logger.warning('No download options available.')
+        return jsonify({'error': 'No download options available.'}), 404
 
-        # Log the API response for debugging
-        logger.debug(f"API Response: {response.status_code} - {response.text}")
-
-        if response.status_code != 200:
-            logger.error(f"API returned an error: {response.status_code}")
-            return jsonify({'error': f"API Error: {response.status_code}"}), response.status_code
-
-        # Parse the API response
-        video_data = response.json()
-        if 'error' in video_data:
-            logger.error(f"API Error: {video_data['error']}")
-            return jsonify({'error': video_data['error']}), 400
-
-        formats_list = [
-            {'resolution': res, 'url': url}
-            for res, url in video_data.get('formats', {}).items()
-            if url
-        ]
-
-        if not formats_list:
-            logger.warning('No download options available.')
-            return jsonify({'error': 'No download options available.'}), 404
-
-        return jsonify({'formats': formats_list})
-
-    except Exception as e:
-        logger.error(f"Error occurred: {e}")
-        return jsonify({'error': 'An internal server error occurred.'}), 500
+    return jsonify({'formats': formats_list}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
