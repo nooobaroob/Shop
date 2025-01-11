@@ -79,7 +79,7 @@ def index():
 
                 fetch('/get_video_formats', {
                     method: 'POST',
-                    body: new URLSearchParams({ 'url': url }),  // Ensure the URL is properly encoded
+                    body: new URLSearchParams({ 'url': url }),
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 })
                 .then(response => response.json())
