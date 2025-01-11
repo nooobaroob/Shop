@@ -4,19 +4,20 @@ import random
 import time
 import re
 
-app = Flask(__name__)  # Initialize the Flask app
+app = Flask(__name__)
 
 # Simulated delay to mimic human-like behavior
 def add_request_delay():
     time.sleep(random.randint(3, 7))  # Random delay between 3 to 7 seconds
 
-# Function to validate the YouTube URL
+# Function to validate the YouTube URL and extract the video ID
 def validate_youtube_url(url):
     print(f"Validating URL: {url}")  # Log the URL to see what is being passed
-    # Updated regular expression to handle both youtube.com and youtu.be formats
     match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+(?:v=|/)([^&?]+)", url)
     if match:
-        return match.group(4)  # Return video ID if URL is valid
+        video_id = match.group(4)
+        print(f"Extracted Video ID: {video_id}")  # Log the extracted video ID
+        return video_id
     return None
 
 # Serve the main page
@@ -127,6 +128,7 @@ def get_video_formats():
 
     # Construct the API URL
     api_url = f"https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id={video_id}"
+    print(f"API Request URL: {api_url}")  # Log the API request URL
 
     try:
         # Simulate human-like delay
