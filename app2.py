@@ -2,12 +2,21 @@ from flask import Flask, request, jsonify
 import requests
 import random
 import time
+import re
 
 app = Flask(__name__)  # Initialize the Flask app
 
 # Simulated delay to mimic human-like behavior
 def add_request_delay():
     time.sleep(random.randint(3, 7))  # Random delay between 3 to 7 seconds
+
+# Function to validate the YouTube URL
+def validate_youtube_url(url):
+    # Regular expression to check if the URL is in a valid YouTube format
+    match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+v=([^&]+)", url)
+    if match:
+        return match.group(4)  # Return video ID if URL is valid
+    return None
 
 # Serve the main page
 @app.route('/')
@@ -103,8 +112,10 @@ def get_video_formats():
     if not youtube_url:
         return jsonify({'error': 'No URL provided'}), 400
 
-    # Extract the video ID from the YouTube URL
-    video_id = youtube_url.split("v=")[-1].split("&")[0]
+    # Validate the YouTube URL and extract video ID
+    video_id = validate_youtube_url(youtube_url)
+    if not video_id:
+        return jsonify({'error': 'Invalid YouTube URL'}), 400
 
     # Set up API headers
     headers = {
@@ -121,6 +132,9 @@ def get_video_formats():
 
         # Send GET request to RapidAPI
         response = requests.get(api_url, headers=headers)
+        
+        # Log the response for debugging
+        print(f"API Response: {response.status_code} - {response.text}")
 
         # Handle HTTP errors
         if response.status_code != 200:
