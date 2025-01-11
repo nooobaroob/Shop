@@ -13,8 +13,8 @@ def add_request_delay():
 # Function to validate the YouTube URL
 def validate_youtube_url(url):
     print(f"Validating URL: {url}")  # Log the URL to see what is being passed
-    # Regular expression to check if the URL is in a valid YouTube format
-    match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+v=([^&]+)", url)
+    # Updated regular expression to handle both youtube.com and youtu.be formats
+    match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+(?:v=|/)([^&?]+)", url)
     if match:
         return match.group(4)  # Return video ID if URL is valid
     return None
