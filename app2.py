@@ -1,3 +1,4 @@
+import logging
 from flask import Flask, request, jsonify
 import requests
 import random
@@ -6,17 +7,20 @@ import re
 
 app = Flask(__name__)
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
 # Simulated delay to mimic human-like behavior
 def add_request_delay():
     time.sleep(random.randint(3, 7))  # Random delay between 3 to 7 seconds
 
 # Function to validate the YouTube URL and extract the video ID
 def validate_youtube_url(url):
-    print(f"Validating URL: {url}")  # Log the URL to see what is being passed
+    app.logger.debug(f"Validating URL: {url}")  # Log the URL to see what is being passed
     match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+(?:v=|/)([^&?]+)", url)
     if match:
         video_id = match.group(4)
-        print(f"Extracted Video ID: {video_id}")  # Log the extracted video ID
+        app.logger.debug(f"Extracted Video ID: {video_id}")  # Log the extracted video ID
         return video_id
     return None
 
@@ -111,13 +115,15 @@ def index():
 @app.route('/get_video_formats', methods=['POST'])
 def get_video_formats():
     youtube_url = request.form.get('url')
-    print(f"Received URL: {youtube_url}")  # Log the URL received from the frontend
+    app.logger.debug(f"Received URL: {youtube_url}")  # Log the URL received from the frontend
     if not youtube_url:
+        app.logger.error('No URL provided in the request.')
         return jsonify({'error': 'No URL provided'}), 400
 
     # Validate the YouTube URL and extract video ID
     video_id = validate_youtube_url(youtube_url)
     if not video_id:
+        app.logger.error('Invalid YouTube URL or unable to extract video ID.')
         return jsonify({'error': 'Invalid YouTube URL'}), 400
 
     # Set up API headers
@@ -128,7 +134,7 @@ def get_video_formats():
 
     # Construct the API URL
     api_url = f"https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id={video_id}"
-    print(f"API Request URL: {api_url}")  # Log the API request URL
+    app.logger.debug(f"API Request URL: {api_url}")  # Log the API request URL
 
     try:
         # Simulate human-like delay
@@ -136,17 +142,19 @@ def get_video_formats():
 
         # Send GET request to RapidAPI
         response = requests.get(api_url, headers=headers)
-        
+
         # Log the response for debugging
-        print(f"API Response: {response.status_code} - {response.text}")
+        app.logger.debug(f"API Response: {response.status_code} - {response.text}")
 
         # Handle HTTP errors
         if response.status_code != 200:
+            app.logger.error(f"API returned an error: {response.status_code}")
             return jsonify({'error': f"API Error: {response.status_code}"}), response.status_code
 
         # Parse the API response
         video_data = response.json()
         if 'error' in video_data:
+            app.logger.error(f"API returned an error in response data: {video_data['error']}")
             return jsonify({'error': video_data['error']}), 400
 
         # Extract formats
@@ -157,12 +165,13 @@ def get_video_formats():
         ]
 
         if not formats_list:
+            app.logger.warning('No download options available.')
             return jsonify({'error': 'No download options available.'}), 404
 
         return jsonify({'formats': formats_list}), 200
 
     except Exception as e:
-        print(f"Error: {e}")
+        app.logger.error(f"Error occurred: {e}")
         return jsonify({'error': 'An internal server error occurred.'}), 500
 
 if __name__ == '__main__':
