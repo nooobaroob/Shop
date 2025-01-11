@@ -78,8 +78,8 @@ def index():
 
                 fetch('/get_video_formats', {
                     method: 'POST',
-                    body: new URLSearchParams({ 'url': url }),
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    body: JSON.stringify({ url: url }), // Send data as JSON
+                    headers: { 'Content-Type': 'application/json' } // Correct content type for JSON
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -117,7 +117,7 @@ def index():
 # Route to get video formats using Pytube
 @app.route('/get_video_formats', methods=['POST'])
 def get_video_formats():
-    youtube_url = request.form.get('url')
+    youtube_url = request.json.get('url')  # Get the URL from JSON
     logger.debug(f"Received URL: {youtube_url}")
     
     if not youtube_url:
