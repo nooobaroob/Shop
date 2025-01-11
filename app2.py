@@ -12,6 +12,7 @@ def add_request_delay():
 
 # Function to validate the YouTube URL
 def validate_youtube_url(url):
+    print(f"Validating URL: {url}")  # Log the URL to see what is being passed
     # Regular expression to check if the URL is in a valid YouTube format
     match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+v=([^&]+)", url)
     if match:
@@ -109,6 +110,7 @@ def index():
 @app.route('/get_video_formats', methods=['POST'])
 def get_video_formats():
     youtube_url = request.form.get('url')
+    print(f"Received URL: {youtube_url}")  # Log the URL received from the frontend
     if not youtube_url:
         return jsonify({'error': 'No URL provided'}), 400
 
