@@ -19,18 +19,20 @@ def add_request_delay():
 # Function to validate YouTube URL and extract video ID
 def validate_youtube_url(url):
     logger.debug(f"Validating URL: {url}")
-    
-    # Remove query parameters (anything after "?")
+
+    # Remove any query parameters after "?" (e.g., ?si=NSdru4NSBtoNWQhc)
     url = url.split('?')[0]
 
-    # Match valid YouTube URL formats (both normal and shortened versions)
-    match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+(?:v=|/)([^&?]+)", url)
+    # Match full YouTube URL (e.g., youtube.com/watch?v=VIDEO_ID) or shortened (youtu.be/VIDEO_ID)
+    match = re.match(r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/(?:watch\?v=|(?:v|e(?:mbed)?)?/)([^&?]+)", url)
     
     if match:
         video_id = match.group(4)  # Extract the video ID from the matched URL
         logger.debug(f"Extracted Video ID: {video_id}")
         return video_id
-    return None  # Return None if the URL is invalid or doesn't match the expected pattern
+    else:
+        logger.error(f"Invalid URL: {url}")
+        return None  # Return None if the URL is invalid or doesn't match the expected pattern
 
 # Serve the main page (HTML)
 @app.route('/')
